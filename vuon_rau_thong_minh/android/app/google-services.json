@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "1035600538562",
+    "project_id": "plant-management-aiot-7df9b",
+    "storage_bucket": "plant-management-aiot-7df9b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1035600538562:android:78d8cbc55d6f4ecda9845b",
+        "android_client_info": {
+          "package_name": "com.example.vuon_rau_thong_minh"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1035600538562-d71f7kf3ggls5uhhsothlckd8be9q5aj.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.vuon_rau_thong_minh",
+            "certificate_hash": "29951c941ee09794c03deebbeb7a759c83f6e2e0"
+          }
+        },
+        {
+          "client_id": "1035600538562-284piv9vp9k4vnmt15u4rhqos9dlo7g3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyABsmw4DQ8M_sE5SDl1nsQNTDrAzys4B_I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1035600538562-284piv9vp9k4vnmt15u4rhqos9dlo7g3.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
