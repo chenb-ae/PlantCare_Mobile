@@ -23,7 +23,7 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
   // Biến lưu trạng thái lựa chọn
   DateTime _selectedDate = DateTime.now();
   String _selectedPlantType = 'Cải Thìa';
-  String _selectedSensor = 'sensor_01';
+  String? _selectedSensor;
   String _selectedPlacement = 'outdoor';
   File? _selectedImage;
   final ImagePicker _imagePicker = ImagePicker();
@@ -44,11 +44,8 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
     {'name': 'Xà Lách', 'icon': Icons.spa},
   ];
 
-  // Danh sách bộ cảm biến mẫu
-  List<Map<String, String>> _sensors = [
-    {'id': 'sensor_01', 'name': 'Cảm biến #1 (Ban công)', 'status': 'Sẵn sàng'},
-    {'id': 'sensor_02', 'name': 'Cảm biến #2 (Sân thượng)', 'status': 'Sẵn sàng'},
-  ];
+  // Danh sách bộ cảm biến cá nhân của người dùng
+  List<Map<String, String>> _sensors = [];
 
   // Danh sách vị trí đặt chậu (khớp API: outdoor | shaded)
   final List<Map<String, dynamic>> _placements = [
@@ -66,13 +63,16 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
     try {
       final userId = UserSession().currentUserId;
       final sensorList = await SensorService.listSensors(userId: userId);
-      if (sensorList.isNotEmpty && mounted) {
+      if (mounted) {
         setState(() {
           _sensors = sensorList.map((s) => {
             'id': s['sensor_id'].toString(),
             'name': s['name'].toString(),
             'status': s['status'] == 'available' ? 'Sẵn sàng' : 'Đã gán (${s['current_plant_name'] ?? ''})',
           }).toList();
+          if (_sensors.isNotEmpty && _selectedSensor == null) {
+            _selectedSensor = _sensors.first['id'];
+          }
         });
       }
     } catch (_) {}
@@ -122,6 +122,8 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
       },
     );
   }
+
+
 
   @override
   void dispose() {

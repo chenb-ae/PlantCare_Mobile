@@ -25,6 +25,15 @@ class SensorService {
     return null;
   }
 
+  static Future<bool> deleteSensor(String sensorId) async {
+    try {
+      await ApiService.delete('/api/sensors/$sensorId');
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   static Future<Map<String, dynamic>?> getLatestReading(String plantId) async {
     try {
       final response = await ApiService.get('/api/sensor-readings/latest/$plantId');

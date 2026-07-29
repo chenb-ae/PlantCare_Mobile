@@ -36,7 +36,7 @@ class PlantService {
     required String userId,
     required String name,
     required String type,
-    String sensorId = 'sensor_01',
+    String? sensorId,
     String placement = 'outdoor',
     String? imageUrl,
   }) async {
@@ -44,7 +44,7 @@ class PlantService {
       'user_id': userId,
       'name': name,
       'type': type,
-      'sensor_id': sensorId,
+      if (sensorId != null && sensorId.isNotEmpty) 'sensor_id': sensorId,
       'placement': placement,
       if (imageUrl != null && imageUrl.isNotEmpty) 'image_url': imageUrl,
     });

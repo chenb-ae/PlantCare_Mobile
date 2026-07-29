@@ -18,12 +18,18 @@ class LogService {
     required String plantId,
     required String action,
     String? notes,
+    String? imageUrl,
   }) async {
-    final response = await ApiService.post('/api/logs', body: {
+    final body = <String, dynamic>{
       'plant_id': plantId,
       'action': action,
       'notes': notes ?? '',
-    });
+    };
+    if (imageUrl != null) {
+      body['image_url'] = imageUrl;
+    }
+
+    final response = await ApiService.post('/api/logs', body: body);
 
     if (response is Map<String, dynamic>) {
       return response;

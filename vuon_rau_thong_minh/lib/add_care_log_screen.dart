@@ -1,7 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'models/user_session.dart';
 import 'services/log_service.dart';
 import 'services/alert_service.dart';
+import 'services/upload_service.dart';
 import 'utils/app_snackbar.dart';
 
 class AddCareLogScreen extends StatefulWidget {
@@ -25,6 +28,7 @@ class _AddCareLogScreenState extends State<AddCareLogScreen> {
   DateTime _selectedDate = DateTime.now();
   TimeOfDay _selectedTime = TimeOfDay.now();
   final TextEditingController _notesController = TextEditingController();
+  File? _selectedImage;
   bool _isLoading = false;
 
   final Map<String, String> _actionKeyMap = {
@@ -47,6 +51,61 @@ class _AddCareLogScreenState extends State<AddCareLogScreen> {
   void dispose() {
     _notesController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(source: source, imageQuality: 80);
+      if (picked != null) {
+        setState(() {
+          _selectedImage = File(picked.path);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        AppSnackBar.showError(context, 'Lỗi chọn ảnh: $e');
+      }
+    }
+  }
+
+  void _showImageSourceModal() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.photo_camera, color: colorScheme.primary),
+                title: Text('Chụp ảnh từ Camera', style: TextStyle(color: colorScheme.onSurface)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.photo_library, color: colorScheme.primary),
+                title: Text('Chọn ảnh từ Thư viện', style: TextStyle(color: colorScheme.onSurface)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -109,10 +168,16 @@ class _AddCareLogScreenState extends State<AddCareLogScreen> {
     });
 
     try {
+      String? imageUrl;
+      if (_selectedImage != null) {
+        imageUrl = await UploadService.uploadImage(_selectedImage!);
+      }
+
       await LogService.createCareLog(
         plantId: widget.plantId!,
         action: apiAction,
         notes: notes,
+        imageUrl: imageUrl,
       );
 
       // Kích hoạt ngay việc tải và nổ thông báo đẩy OS nếu tác động nhật ký khiến thông số vượt ngưỡng
@@ -217,7 +282,7 @@ class _AddCareLogScreenState extends State<AddCareLogScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          widget.plantName, // Hiển thị tên cây
+                          widget.plantName,
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
@@ -249,80 +314,57 @@ class _AddCareLogScreenState extends State<AddCareLogScreen> {
                   color: textColor,
                 ),
               ),
-              const SizedBox(height: 8),
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  mainAxisSpacing: 8,
-                  crossAxisSpacing: 8,
-                  childAspectRatio: 2.2,
-                ),
-                itemCount: _actions.length,
-                itemBuilder: (context, index) {
-                  final action = _actions[index];
-                  final isSelected = _selectedAction == action['name'];
+              const SizedBox(height: 10),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: _actions.map((act) {
+                    final name = act['name'] as String;
+                    final icon = act['icon'] as IconData;
+                    final isSelected = _selectedAction == name;
 
-                  final bool isDisabled = (widget.placement == 'outdoor' && action['name'] == 'Đưa ra ngoài') ||
-                      (widget.placement == 'shaded' && action['name'] == 'Đưa vào nhà');
-
-                  return InkWell(
-                    onTap: isDisabled
-                        ? () {
-                            AppSnackBar.showInfo(
-                              context,
-                              widget.placement == 'outdoor'
-                                  ? 'Chậu cây hiện tại đã ở ngoài trời rồi!'
-                                  : 'Chậu cây hiện tại đã ở trong nhà rồi!',
-                            );
-                          }
-                        : () {
-                            setState(() {
-                              _selectedAction = action['name'];
-                            });
-                          },
-                    borderRadius: BorderRadius.circular(8),
-                    child: Opacity(
-                      opacity: isDisabled ? 0.4 : 1.0,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: isSelected ? primaryContainer : (isDisabled ? surfaceContainer : surfaceColor),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: isSelected ? primaryContainer : outlineVariant,
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8.0),
+                      child: FilterChip(
+                        selected: isSelected,
+                        showCheckmark: false,
+                        avatar: Icon(
+                          icon,
+                          size: 16,
+                          color: isSelected ? Colors.white : subTextColor,
+                        ),
+                        label: Text(name),
+                        labelStyle: TextStyle(
+                          color: isSelected ? Colors.white : textColor,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          fontSize: 13,
+                        ),
+                        backgroundColor: surfaceContainer,
+                        selectedColor: primaryColor,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          side: BorderSide(
+                            color: isSelected ? primaryColor : outlineVariant,
                           ),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              action['icon'],
-                              size: 18,
-                              color: isSelected ? Colors.white : subTextColor,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              action['name'],
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isSelected ? Colors.white : subTextColor,
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                              ),
-                            ),
-                          ],
-                        ),
+                        onSelected: (selected) {
+                          if (selected) {
+                            setState(() {
+                              _selectedAction = name;
+                            });
+                          }
+                        },
                       ),
-                    ),
-                  );
-                },
+                    );
+                  }).toList(),
+                ),
               ),
 
               const SizedBox(height: 20),
 
               // 3. Chọn Ngày & Giờ
               Text(
-                'Thời gian',
+                'Thời gian thực hiện',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
@@ -332,9 +374,8 @@ class _AddCareLogScreenState extends State<AddCareLogScreen> {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  // Chọn ngày
                   Expanded(
-                    flex: 2,
+                    flex: 1,
                     child: InkWell(
                       onTap: () => _selectDate(context),
                       borderRadius: BorderRadius.circular(8),
@@ -358,7 +399,6 @@ class _AddCareLogScreenState extends State<AddCareLogScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  // Chọn giờ
                   Expanded(
                     flex: 1,
                     child: InkWell(
@@ -427,13 +467,11 @@ class _AddCareLogScreenState extends State<AddCareLogScreen> {
               ),
               const SizedBox(height: 8),
               InkWell(
-                onTap: () {
-                  // Mở Camera / Thư viện ảnh
-                },
+                onTap: _showImageSourceModal,
                 borderRadius: BorderRadius.circular(8),
                 child: Container(
                   width: double.infinity,
-                  height: 110,
+                  height: 140,
                   decoration: BoxDecoration(
                     color: surfaceColor,
                     borderRadius: BorderRadius.circular(8),
@@ -442,17 +480,50 @@ class _AddCareLogScreenState extends State<AddCareLogScreen> {
                       style: BorderStyle.solid,
                     ),
                   ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.add_a_photo, size: 28, color: subTextColor),
-                      SizedBox(height: 6),
-                      Text(
-                        'Tải ảnh lên',
-                        style: TextStyle(fontSize: 12, color: subTextColor),
-                      ),
-                    ],
-                  ),
+                  child: _selectedImage != null
+                      ? Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.file(
+                                _selectedImage!,
+                                width: double.infinity,
+                                height: 140,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _selectedImage = null;
+                                  });
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.black54,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.close, color: Colors.white, size: 18),
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      : Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.add_a_photo, size: 28, color: subTextColor),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Nhấn để chụp hoặc chọn ảnh từ máy',
+                              style: TextStyle(fontSize: 12, color: subTextColor),
+                            ),
+                          ],
+                        ),
                 ),
               ),
 

@@ -14,10 +14,6 @@ class AlertsScreen extends StatefulWidget {
 class _AlertsScreenState extends State<AlertsScreen> {
   static const primaryColor = Color(0xFF005131);
 
-  static const errorColor = Color(0xFFBA1A1A);
-  static const errorContainerColor = Color(0xFFFFDAD6);
-  static const onErrorContainerColor = Color(0xFF93000A);
-
   static const tertiaryColor = Color(0xFF5B411E);
   static const tertiaryContainerColor = Color(0xFF755833);
 
@@ -181,18 +177,18 @@ class _AlertsScreenState extends State<AlertsScreen> {
     final plantName = alert['plant_name'] ?? 'Chậu cây';
     final ts = TimeUtils.formatVietnamTime(alert['timestamp']);
 
-    IconData icon = Icons.warning_amber_rounded;
-    Color containerColor = errorContainerColor;
-    Color contentColor = onErrorContainerColor;
-    Color badgeBg = errorColor;
-    String badgeText = 'Khẩn Cấp';
+    IconData icon = Icons.water_drop;
+    Color containerColor = Colors.blue.withValues(alpha: 0.15);
+    Color contentColor = Colors.blue;
+    Color badgeBg = Colors.blue;
+    String badgeText = 'Độ Ẩm';
 
     if (type.contains('TEMP')) {
       icon = Icons.thermostat;
       containerColor = tertiaryContainerColor.withValues(alpha: 0.15);
       contentColor = tertiaryColor;
       badgeBg = tertiaryContainerColor;
-      badgeText = 'Cảnh Báo Nhiệt';
+      badgeText = 'Nhiệt Độ';
     } else if (type.contains('NPK') || type.contains('GROWTH')) {
       icon = Icons.eco;
       containerColor = primaryContainerColor.withValues(alpha: 0.15);

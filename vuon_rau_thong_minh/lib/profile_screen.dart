@@ -6,6 +6,7 @@ import 'edit_profile_screen.dart';
 import 'change_password_screen.dart';
 import 'models/user_session.dart';
 import 'services/auth_service.dart';
+import 'services/sensor_service.dart';
 import 'services/theme_service.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -36,6 +37,170 @@ class _ProfileScreenState extends State<ProfileScreen> {
         setState(() {});
       }
     } catch (_) {}
+  }
+
+  Future<void> _showSensorManagementModal() async {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            final userId = UserSession().currentUserId;
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.65,
+              padding: const EdgeInsets.all(20),
+              child: FutureBuilder<List<Map<String, dynamic>>>(
+                future: SensorService.listSensors(userId: userId),
+                builder: (context, snapshot) {
+                  final sensors = snapshot.data ?? [];
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Quản lý Cảm biến',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.add_circle, color: colorScheme.primary),
+                            onPressed: () async {
+                              final nameCtrl = TextEditingController();
+                              await showDialog(
+                                context: ctx,
+                                builder: (dialogCtx) => AlertDialog(
+                                  title: const Text('Thêm cảm biến mới'),
+                                  content: TextField(
+                                    controller: nameCtrl,
+                                    decoration: const InputDecoration(hintText: 'Tên cảm biến (vd: Cảm biến Ban Công)'),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(dialogCtx),
+                                      child: const Text('Hủy'),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () async {
+                                        if (nameCtrl.text.trim().isNotEmpty) {
+                                          await SensorService.createSensor(
+                                            name: nameCtrl.text.trim(),
+                                            userId: userId,
+                                          );
+                                          if (dialogCtx.mounted) Navigator.pop(dialogCtx);
+                                          setModalState(() {});
+                                        }
+                                      },
+                                      child: const Text('Thêm'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Expanded(
+                        child: snapshot.connectionState == ConnectionState.waiting
+                            ? const Center(child: CircularProgressIndicator())
+                            : sensors.isEmpty
+                                ? Center(
+                                    child: Text(
+                                      'Bạn chưa có cảm biến cá nhân nào.\nBấm nút "+" góc phải để thêm!',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(color: colorScheme.onSurfaceVariant),
+                                    ),
+                                  )
+                                : ListView.builder(
+                                    itemCount: sensors.length,
+                                    itemBuilder: (ctx, index) {
+                                      final sensor = sensors[index];
+                                      final sId = sensor['sensor_id'] ?? '';
+                                      final sName = sensor['name'] ?? 'Cảm biến';
+                                      final plantName = sensor['current_plant_name'];
+                                      final statusText = plantName != null && plantName.toString().isNotEmpty
+                                          ? 'Đã gán: $plantName'
+                                          : 'Sẵn sàng';
+
+                                      return Card(
+                                        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                                        elevation: 0,
+                                        margin: const EdgeInsets.only(bottom: 10),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        child: ListTile(
+                                          leading: CircleAvatar(
+                                            backgroundColor: colorScheme.primary.withValues(alpha: 0.1),
+                                            child: Icon(Icons.sensors, color: colorScheme.primary),
+                                          ),
+                                          title: Text(sName, style: TextStyle(fontWeight: FontWeight.bold, color: colorScheme.onSurface)),
+                                          subtitle: Text(statusText, style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12)),
+                                          trailing: IconButton(
+                                            icon: const Icon(Icons.delete_outline, color: Colors.red),
+                                            onPressed: () async {
+                                              if (plantName != null && plantName.toString().isNotEmpty) {
+                                                showDialog(
+                                                  context: ctx,
+                                                  builder: (alertCtx) => AlertDialog(
+                                                    title: const Text('Không thể xóa cảm biến'),
+                                                    content: Text('Cảm biến "$sName" đang được gắn cho chậu cây "$plantName". Vui lòng tháo hoặc thu hoạch chậu cây trước khi xóa cảm biến!'),
+                                                    actions: [
+                                                      TextButton(
+                                                        onPressed: () => Navigator.pop(alertCtx),
+                                                        child: const Text('Đã hiểu'),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                );
+                                                return;
+                                              }
+
+                                              final confirm = await showDialog<bool>(
+                                                context: ctx,
+                                                builder: (confirmCtx) => AlertDialog(
+                                                  title: const Text('Xóa cảm biến'),
+                                                  content: Text('Bạn có chắc chắn muốn xóa "$sName" không?'),
+                                                  actions: [
+                                                    TextButton(
+                                                      onPressed: () => Navigator.pop(confirmCtx, false),
+                                                      child: const Text('Hủy'),
+                                                    ),
+                                                    ElevatedButton(
+                                                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                                                      onPressed: () => Navigator.pop(confirmCtx, true),
+                                                      child: const Text('Xóa'),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                              if (confirm == true) {
+                                                await SensorService.deleteSensor(sId);
+                                                setModalState(() {});
+                                              }
+                                            },
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   void _showLogoutDialog() {
@@ -143,6 +308,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             setState(() {});
                           }
                         },
+                      ),
+                      _buildSettingsTile(
+                        theme: theme,
+                        icon: Icons.sensors_outlined,
+                        title: 'Quản lý thiết bị cảm biến',
+                        subtitle: 'Xem & xóa cảm biến cá nhân',
+                        onTap: _showSensorManagementModal,
                       ),
                       _buildSettingsTile(
                         theme: theme,
