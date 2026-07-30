@@ -302,8 +302,11 @@ class _PlantingHistoryScreenState extends State<PlantingHistoryScreen> {
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) => Container(
                     height: 160,
+                    width: double.infinity,
                     color: colorScheme.surfaceContainerHighest,
-                    child: const Icon(Icons.broken_image, color: Colors.grey),
+                    child: const Center(
+                      child: Icon(Icons.broken_image, color: Colors.grey),
+                    ),
                   ),
                 ),
               ),

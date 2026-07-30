@@ -232,8 +232,11 @@ class _PlantDetailScreenState extends State<PlantDetailScreen> {
             fit: BoxFit.cover,
             errorBuilder: (context, error, stackTrace) => Container(
               height: 200,
+              width: double.infinity,
               color: surfaceContainerLow,
-              child: const Icon(Icons.grass, size: 50, color: Colors.grey),
+              child: const Center(
+                child: Icon(Icons.grass, size: 50, color: Colors.grey),
+              ),
             ),
           ),
           Positioned.fill(

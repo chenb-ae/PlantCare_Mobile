@@ -412,8 +412,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) => Container(
                       height: 160,
-                      color: Colors.grey[200],
-                      child: const Icon(Icons.grass, size: 50, color: Colors.grey),
+                      width: double.infinity,
+                      color: isDark ? const Color(0xFF2C322E) : Colors.grey[200],
+                      child: const Center(
+                        child: Icon(Icons.grass, size: 50, color: Colors.grey),
+                      ),
                     ),
                   ),
                 ),
